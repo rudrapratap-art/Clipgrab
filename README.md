@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Clipgrab — Video Downloader
 
 A fast, private, and secure web application for downloading videos from YouTube, Instagram, Facebook, TikTok, and more. Built with Flask, yt-dlp, and Supabase.
@@ -500,3 +501,6 @@ For bugs or feature requests, open an issue on GitHub.
 
 **Last Updated:** September 2026  
 **Version:** 1.0.0
+=======
+# Clipgrab
+>>>>>>> ac530a8a2aaf63e6009da58a488070bec6daf9b2
