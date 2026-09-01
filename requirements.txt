@@ -1,0 +1,6 @@
+Flask
+yt-dlp
+yt-dlp-ejs
+gunicorn
+supabase
+python-dotenv

@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: clipgrab
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT
+    envVars:
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_KEY
+        sync: false
+      - key: FLASK_SECRET_KEY
+        generateValue: true
+      - key: FLASK_COOKIE_SECURE
+        value: "1"
+      - key: YOUTUBE_COOKIES
+        sync: false
