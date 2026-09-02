@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#030712">
+
+    <title>Login — Clipgrab</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+
+            font-family: Inter, Arial, sans-serif;
+            color: #f8fafc;
+
+            background:
+                radial-gradient(
+                    circle at 15% 15%,
+                    rgba(34, 211, 238, .14),
+                    transparent 30%
+                ),
+                radial-gradient(
+                    circle at 85% 15%,
+                    rgba(168, 85, 247, .14),
+                    transparent 30%
+                ),
+                #030712;
+        }
+
+        .login-card {
+            width: 100%;
+            max-width: 420px;
+            padding: 34px;
+
+            border: 1px solid rgba(148, 163, 184, .16);
+            border-radius: 24px;
+
+            background: rgba(8, 18, 34, .78);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+
+            box-shadow:
+                0 25px 80px rgba(0,0,0,.45),
+                0 0 50px rgba(34,211,238,.04);
+        }
+
+        .logo {
+            width: 52px;
+            height: 52px;
+            margin: 0 auto 18px;
+
+            display: grid;
+            place-items: center;
+
+            border-radius: 15px;
+            border: 1px solid rgba(34,211,238,.4);
+
+            color: #22d3ee;
+            background: rgba(34,211,238,.08);
+        }
+
+        .logo svg {
+            width: 27px;
+            height: 27px;
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 28px;
+            letter-spacing: -1px;
+            margin-bottom: 8px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #94a3b8;
+            font-size: 13px;
+            line-height: 1.6;
+            margin-bottom: 28px;
+        }
+
+        .field {
+            margin-bottom: 18px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 7px;
+            color: #cbd5e1;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        input {
+            width: 100%;
+            padding: 14px 15px;
+
+            border: 1px solid rgba(148,163,184,.16);
+            border-radius: 12px;
+            outline: none;
+
+            color: white;
+            background: rgba(3,10,22,.72);
+
+            font-size: 14px;
+
+            transition:
+                border-color .2s ease,
+                box-shadow .2s ease;
+        }
+
+        input::placeholder {
+            color: #475569;
+        }
+
+        input:focus {
+            border-color: rgba(34,211,238,.65);
+
+            box-shadow:
+                0 0 0 4px rgba(34,211,238,.06);
+        }
+
+        .password-wrap {
+            position: relative;
+        }
+
+        .password-wrap input {
+            padding-right: 65px;
+        }
+
+        .show-password {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+
+            border: 0;
+            background: transparent;
+
+            color: #64748b;
+            font-size: 11px;
+            font-weight: 700;
+
+            cursor: pointer;
+        }
+
+        .show-password:hover {
+            color: #cbd5e1;
+        }
+
+        .submit {
+            width: 100%;
+            margin-top: 5px;
+            padding: 14px;
+
+            border: 0;
+            border-radius: 12px;
+
+            color: white;
+            font-size: 14px;
+            font-weight: 800;
+
+            cursor: pointer;
+
+            background:
+                linear-gradient(
+                    100deg,
+                    #06b6d4,
+                    #3b82f6 55%,
+                    #9333ea
+                );
+
+            box-shadow:
+                0 12px 30px rgba(59,130,246,.23);
+
+            transition:
+                transform .2s ease,
+                filter .2s ease;
+        }
+
+        .submit:hover {
+            transform: translateY(-2px);
+            filter: brightness(1.08);
+        }
+
+        .message {
+            margin-bottom: 18px;
+            padding: 12px 13px;
+
+            border-radius: 11px;
+
+            color: #fecdd3;
+            border: 1px solid rgba(251,59,90,.25);
+            background: rgba(251,59,90,.08);
+
+            font-size: 12px;
+            line-height: 1.5;
+        }
+
+        .register {
+            margin-top: 23px;
+            text-align: center;
+
+            color: #64748b;
+            font-size: 12px;
+        }
+
+        .register a {
+            color: #67e8f9;
+            font-weight: 700;
+            text-decoration: none;
+        }
+
+        .register a:hover {
+            text-decoration: underline;
+        }
+
+        .back {
+            display: block;
+            margin-top: 18px;
+
+            text-align: center;
+            color: #475569;
+
+            font-size: 11px;
+            text-decoration: none;
+        }
+
+        .back:hover {
+            color: #94a3b8;
+        }
+
+        @media (max-width: 480px) {
+            .login-card {
+                padding: 27px 20px;
+                border-radius: 20px;
+            }
+
+            h1 {
+                font-size: 25px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="login-card">
+
+    <div class="logo">
+        <svg viewBox="0 0 24 24" fill="none">
+            <path
+                d="M12 3v10m0 0 4-4m-4 4-4-4M5 17v2h14v-2"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+            />
+        </svg>
+    </div>
+
+    <h1>Welcome back</h1>
+
+    <p class="subtitle">
+        Log in to access your saved videos and downloads.
+    </p>
+
+    {% if error %}
+        <div class="message">
+            {{ error }}
+        </div>
+    {% endif %}
+
+    <form method="POST" action="/login">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <div class="field">
+            <label for="email">Email</label>
+
+            <input
+                id="email"
+                type="email"
+                name="email"
+                placeholder="you@example.com"
+                autocomplete="email"
+                required
+            >
+        </div>
+
+        <div class="field">
+            <label for="password">Password</label>
+
+            <div class="password-wrap">
+                <input
+                    id="password"
+                    type="password"
+                    name="password"
+                    placeholder="Enter your password"
+                    autocomplete="current-password"
+                    required
+                >
+
+                <button
+                    type="button"
+                    class="show-password"
+                    onclick="togglePassword()"
+                >
+                    SHOW
+                </button>
+            </div>
+        </div>
+
+        <button class="submit" type="submit">
+            Log In
+        </button>
+
+    </form>
+
+    <div class="register">
+        Don't have an account?
+        <a href="/register">Create account</a>
+    </div>
+
+    <a class="back" href="/">
+        ← Back to Clipgrab
+    </a>
+
+</div>
+
+<script>
+function togglePassword() {
+    const input = document.getElementById("password");
+    const button = document.querySelector(".show-password");
+
+    if (input.type === "password") {
+        input.type = "text";
+        button.textContent = "HIDE";
+    } else {
+        input.type = "password";
+        button.textContent = "SHOW";
+    }
+}
+</script>
+
+</body>
+</html>

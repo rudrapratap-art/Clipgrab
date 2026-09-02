@@ -1,0 +1,269 @@
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <meta name="theme-color" content="#030712">
+            <title>{{ title }} — Clipgrab</title>
+            <style>
+                * { box-sizing: border-box; }
+
+                body {
+                    margin: 0;
+                    min-height: 100vh;
+                    padding: 18px;
+                    background: #030712;
+                    color: white;
+                    font-family: Inter, Arial, sans-serif;
+                    background:
+                        radial-gradient(circle at 15% 10%, rgba(34,211,238,.12), transparent 30%),
+                        radial-gradient(circle at 85% 10%, rgba(168,85,247,.12), transparent 30%),
+                        #030712;
+                }
+
+                .watch-page {
+                    width: min(1100px, 100%);
+                    margin: 0 auto;
+                }
+
+                .topbar {
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    margin-bottom: 18px;
+                }
+
+                .brand {
+                    display: flex;
+                    align-items: center;
+                    gap: 10px;
+                    color: white;
+                    text-decoration: none;
+                    font-size: 20px;
+                    font-weight: 800;
+                }
+
+                .brand-icon {
+                    width: 38px;
+                    height: 38px;
+                    display: grid;
+                    place-items: center;
+                    border: 1px solid rgba(34,211,238,.4);
+                    border-radius: 11px;
+                    color: #22d3ee;
+                    background: rgba(34,211,238,.08);
+                }
+
+                .back,
+                .action {
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 8px;
+                    border-radius: 11px;
+                    text-decoration: none;
+                    font-weight: 700;
+                }
+
+                .back {
+                    padding: 10px 14px;
+                    border: 1px solid rgba(148,163,184,.16);
+                    color: #cbd5e1;
+                    background: rgba(255,255,255,.035);
+                    font-size: 13px;
+                }
+
+                .player-card {
+                    overflow: hidden;
+                    border: 1px solid rgba(148,163,184,.16);
+                    border-radius: 20px;
+                    background: rgba(8,18,34,.78);
+                    box-shadow: 0 25px 80px rgba(0,0,0,.42);
+                }
+
+                .video-wrap {
+                    width: 100%;
+                    aspect-ratio: 16 / 9;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    background: #000;
+                }
+
+                video {
+                    display: block;
+                    width: 100%;
+                    height: 100%;
+                    object-fit: contain;
+                    background: black;
+                }
+
+                .video-info { padding: 20px 22px; }
+
+                .status {
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 7px;
+                    margin-bottom: 10px;
+                    padding: 6px 10px;
+                    border: 1px solid rgba(34,197,94,.18);
+                    border-radius: 999px;
+                    color: #86efac;
+                    background: rgba(34,197,94,.08);
+                    font-size: 11px;
+                    font-weight: 700;
+                }
+
+                .status-dot {
+                    width: 6px;
+                    height: 6px;
+                    border-radius: 50%;
+                    background: #22c55e;
+                    box-shadow: 0 0 10px rgba(34,197,94,.7);
+                }
+
+                .status-preview {
+                    border-color: rgba(245,158,11,.28);
+                    color: #fcd34d;
+                    background: rgba(245,158,11,.1);
+                }
+
+                .status-preview .status-dot {
+                    background: #f59e0b;
+                    box-shadow: 0 0 10px rgba(245,158,11,.7);
+                }
+
+                h1 {
+                    margin: 0;
+                    color: white;
+                    font-size: clamp(18px, 3vw, 25px);
+                    line-height: 1.35;
+                    overflow-wrap: anywhere;
+                }
+
+                .subtitle {
+                    margin-top: 7px;
+                    color: #64748b;
+                    font-size: 12px;
+                }
+
+                .actions {
+                    display: flex;
+                    flex-wrap: wrap;
+                    gap: 10px;
+                    margin-top: 18px;
+                }
+
+                .action {
+                    padding: 11px 16px;
+                    font-size: 13px;
+                }
+
+                .download {
+                    color: white;
+                    background: linear-gradient(100deg, #06b6d4, #2563eb);
+                    box-shadow: 0 9px 25px rgba(37,99,235,.22);
+                }
+
+                .dashboard {
+                    border: 1px solid rgba(148,163,184,.16);
+                    color: #cbd5e1;
+                    background: rgba(255,255,255,.035);
+                }
+
+                @media (max-width: 600px) {
+                    body { padding: 8px; }
+                    .brand { font-size: 18px; }
+                    .brand-icon { width: 35px; height: 35px; }
+                    .back { padding: 9px 11px; font-size: 12px; }
+                    .player-card { border-radius: 16px; }
+                    .video-wrap { aspect-ratio: 16 / 10; }
+                    .video-info { padding: 17px; }
+                    .actions { flex-direction: column; }
+                    .action { width: 100%; }
+                }
+            </style>
+        </head>
+        <body>
+            <main class="watch-page">
+                <header class="topbar">
+                    <a href="/" class="brand">
+                        <span class="brand-icon">↓</span>
+                        Clipgrab
+                    </a>
+                    <a href="/dashboard" class="back">← Dashboard</a>
+                </header>
+
+                <section class="player-card">
+                    <div class="video-wrap">
+                        <video controls playsinline preload="metadata" autoplay>
+                            <source src="{{ video_url }}">
+                            Your browser does not support video playback.
+                        </video>
+                    </div>
+
+                    <div class="video-info">
+                        {% if is_preview %}
+                            <div class="status status-preview">
+                                <span class="status-dot"></span>
+                                Live preview — saving your copy...
+                            </div>
+                        {% else %}
+                            <div class="status">
+                                <span class="status-dot"></span>
+                                Saved video
+                            </div>
+                        {% endif %}
+                        <h1>{{ title }}</h1>
+                        {% if is_preview %}
+                            <div class="subtitle">
+                                Streaming directly from the source while we save your own copy.
+                                This page will switch over automatically once it's ready.
+                            </div>
+                            <div class="actions">
+                                <div class="action download" style="opacity:.5; cursor:default;">
+                                    ⏳ Preparing your copy...
+                                </div>
+                                <a href="/dashboard" class="action dashboard">← Back to Dashboard</a>
+                            </div>
+                        {% else %}
+                            <div class="subtitle">Your video is saved in your Clipgrab library.</div>
+                            <div class="actions">
+                                <a href="/video/{{ download_id }}/download" class="action download">↓ Download</a>
+                                <a href="/dashboard" class="action dashboard">← Back to Dashboard</a>
+                            </div>
+                        {% endif %}
+                    </div>
+                </section>
+            </main>
+
+            {% if is_preview %}
+            <script>
+            (function () {
+                async function checkStatus() {
+                    try {
+                        const response = await fetch(
+                            "/api/download-status/{{ download_id }}",
+                            { cache: "no-store" }
+                        );
+
+                        if (!response.ok) {
+                            return;
+                        }
+
+                        const data = await response.json();
+
+                        if (data.status === "completed" || data.status === "failed") {
+                            window.location.reload();
+                        }
+                    } catch (error) {
+                        console.log("Status check failed:", error);
+                    }
+                }
+
+                setInterval(checkStatus, 5000);
+            })();
+            </script>
+            {% endif %}
+        </body>
+        </html>

@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><title>Retrying download</title></head>
+<body>
+    <p>Retrying download...</p>
+    <form id="retry-form" action="/download-selected" method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="video_url" value="{{ original_url }}">
+        <input type="hidden" name="format_id" value="{{ format_id }}">
+        <input type="hidden" name="retry_id" value="{{ download_id }}">
+    </form>
+    <script>document.getElementById("retry-form").submit();</script>
+</body>
+</html>

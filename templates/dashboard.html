@@ -1,0 +1,1003 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#030712">
+
+    <title>My Downloads — Clipgrab</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            min-height: 100vh;
+            color: #f8fafc;
+            font-family: Inter, Arial, sans-serif;
+
+            background:
+                radial-gradient(
+                    circle at 10% 5%,
+                    rgba(34, 211, 238, .12),
+                    transparent 28%
+                ),
+                radial-gradient(
+                    circle at 90% 5%,
+                    rgba(168, 85, 247, .12),
+                    transparent 28%
+                ),
+                #030712;
+        }
+
+        .container {
+            width: min(1100px, calc(100% - 28px));
+            margin: auto;
+        }
+
+        /* Navbar */
+
+        .navbar {
+            height: 76px;
+
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+
+            border-bottom: 1px solid rgba(148,163,184,.14);
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+
+            color: white;
+            text-decoration: none;
+
+            font-size: 22px;
+            font-weight: 800;
+        }
+
+        .brand-icon {
+            width: 39px;
+            height: 39px;
+
+            display: grid;
+            place-items: center;
+
+            border-radius: 11px;
+
+            color: #22d3ee;
+            border: 1px solid rgba(34,211,238,.35);
+            background: rgba(34,211,238,.08);
+        }
+
+        .brand-icon svg {
+            width: 21px;
+        }
+
+        .nav-right {
+            display: flex;
+            align-items: center;
+            gap: 13px;
+        }
+
+        .user {
+            padding: 9px 13px;
+
+            border: 1px solid rgba(148,163,184,.14);
+            border-radius: 10px;
+
+            color: #cbd5e1;
+            background: rgba(255,255,255,.025);
+
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .logout {
+            padding: 9px 13px;
+
+            border: 1px solid rgba(251,59,90,.22);
+            border-radius: 10px;
+
+            color: #fda4af;
+            background: rgba(251,59,90,.06);
+
+            font-size: 12px;
+            font-weight: 700;
+            text-decoration: none;
+
+            transition: .2s;
+        }
+
+        .logout:hover {
+            background: rgba(251,59,90,.12);
+        }
+
+        /* Header */
+
+        .page-header {
+            padding: 55px 0 30px;
+        }
+
+        .page-header h1 {
+            font-size: clamp(30px, 5vw, 43px);
+            letter-spacing: -1.8px;
+            margin-bottom: 9px;
+        }
+
+        .gradient {
+            background:
+                linear-gradient(
+                    90deg,
+                    #f8fafc,
+                    #67e8f9,
+                    #c084fc
+                );
+
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        .page-header p {
+            color: #64748b;
+            font-size: 14px;
+        }
+
+        /* Alert */
+
+        .error {
+            margin-bottom: 20px;
+            padding: 13px 15px;
+
+            border-radius: 12px;
+
+            color: #fecdd3;
+            border: 1px solid rgba(251,59,90,.25);
+            background: rgba(251,59,90,.08);
+
+            font-size: 13px;
+        }
+
+        /* Empty */
+
+        .empty {
+            padding: 65px 25px;
+
+            text-align: center;
+
+            border: 1px solid rgba(148,163,184,.13);
+            border-radius: 20px;
+
+            background: rgba(8,18,34,.62);
+        }
+
+        .empty-icon {
+            width: 65px;
+            height: 65px;
+
+            margin: 0 auto 18px;
+
+            display: grid;
+            place-items: center;
+
+            border-radius: 18px;
+
+            color: #22d3ee;
+            border: 1px solid rgba(34,211,238,.25);
+            background: rgba(34,211,238,.07);
+        }
+
+        .empty h2 {
+            font-size: 20px;
+            margin-bottom: 8px;
+        }
+
+        .empty p {
+            color: #64748b;
+            font-size: 13px;
+            margin-bottom: 23px;
+        }
+
+        .download-btn {
+            display: inline-block;
+
+            padding: 12px 18px;
+
+            border-radius: 11px;
+
+            color: white;
+            background:
+                linear-gradient(
+                    100deg,
+                    #06b6d4,
+                    #3b82f6 55%,
+                    #9333ea
+                );
+
+            font-size: 13px;
+            font-weight: 800;
+
+            text-decoration: none;
+        }
+
+        /* Downloads */
+
+        .downloads {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 17px;
+
+            padding-bottom: 60px;
+        }
+
+        .dashboard-controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .dashboard-controls input,
+        .dashboard-controls select,
+        .dashboard-controls button {
+            min-height: 42px;
+            padding: 0 13px;
+            border: 1px solid rgba(148,163,184,.18);
+            border-radius: 10px;
+            color: #f8fafc;
+            background: rgba(8,18,34,.72);
+            font: inherit;
+            font-size: 12px;
+        }
+
+        .dashboard-controls input {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .dashboard-controls button {
+            color: white;
+            background: linear-gradient(100deg, #06b6d4, #2563eb);
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .pagination {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            padding-bottom: 45px;
+        }
+
+        .pagination a,
+        .pagination span {
+            padding: 9px 13px;
+            border: 1px solid rgba(148,163,184,.16);
+            border-radius: 9px;
+            color: #cbd5e1;
+            background: rgba(8,18,34,.62);
+            font-size: 12px;
+            text-decoration: none;
+        }
+
+        .pagination .current {
+            color: white;
+            border-color: rgba(34,211,238,.35);
+            background: rgba(34,211,238,.12);
+        }
+
+        .card {
+            position: relative;
+            overflow: hidden;
+
+            border: 1px solid rgba(148,163,184,.14);
+            border-radius: 18px;
+
+            background:
+                linear-gradient(
+                    145deg,
+                    rgba(12,28,50,.78),
+                    rgba(5,12,25,.78)
+                );
+
+            transition:
+                transform .2s ease,
+                border-color .2s ease;
+        }
+
+        .card.selected {
+            border-color: rgba(239,68,68,.55);
+        }
+
+        .card-select {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            z-index: 2;
+
+            width: 20px;
+            height: 20px;
+
+            accent-color: #ef4444;
+            cursor: pointer;
+        }
+
+        .bulk-bar {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+
+            margin-bottom: 16px;
+            padding: 11px 14px;
+
+            border: 1px solid rgba(148,163,184,.18);
+            border-radius: 10px;
+
+            color: #cbd5e1;
+            background: rgba(8,18,34,.72);
+
+            font-size: 12px;
+        }
+
+        .bulk-bar label {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .bulk-bar input[type="checkbox"] {
+            accent-color: #06b6d4;
+        }
+
+        .bulk-count {
+            color: #94a3b8;
+        }
+
+        .bulk-delete-btn {
+            margin-left: auto;
+
+            min-height: 34px;
+            padding: 0 14px;
+            border: none;
+            border-radius: 9px;
+
+            color: white;
+            background: linear-gradient(100deg, #ef4444, #b91c1c);
+
+            font: inherit;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .bulk-delete-btn:disabled {
+            opacity: .35;
+            cursor: not-allowed;
+        }
+
+        .card:hover {
+            transform: translateY(-3px);
+            border-color: rgba(34,211,238,.25);
+        }
+
+        .thumbnail {
+            height: 175px;
+
+            display: grid;
+            place-items: center;
+
+            background:
+                linear-gradient(
+                    135deg,
+                    rgba(34,211,238,.08),
+                    rgba(168,85,247,.08)
+                );
+
+            overflow: hidden;
+        }
+
+        .thumbnail img {
+            width: 100%;
+            height: 100%;
+
+            object-fit: cover;
+        }
+
+        .placeholder {
+            color: #475569;
+            font-size: 42px;
+        }
+
+        .card-body {
+            padding: 17px;
+        }
+
+        .title {
+            color: #f8fafc;
+
+            font-size: 14px;
+            font-weight: 700;
+            line-height: 1.5;
+
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 7px;
+
+            margin-top: 11px;
+        }
+
+        .tag {
+            padding: 5px 8px;
+
+            border-radius: 7px;
+
+            color: #94a3b8;
+            background: rgba(255,255,255,.04);
+
+            font-size: 10px;
+            font-weight: 700;
+        }
+
+        .actions {
+            display: flex;
+            gap: 8px;
+
+            margin-top: 16px;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 5px 10px;
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: .2px;
+        }
+
+        .status-completed {
+            color: #86efac;
+            background: rgba(34,197,94,.10);
+            border: 1px solid rgba(34,197,94,.18);
+        }
+
+        .status-processing {
+            color: #fcd34d;
+            background: rgba(245,158,11,.10);
+            border: 1px solid rgba(245,158,11,.18);
+        }
+
+        .status-failed {
+            color: #fb7185;
+            background: rgba(239,68,68,.10);
+            border: 1px solid rgba(239,68,68,.18);
+        }
+
+        .action {
+            flex: 1;
+
+            padding: 10px;
+
+            border-radius: 9px;
+
+            text-align: center;
+
+            font-size: 11px;
+            font-weight: 800;
+
+            text-decoration: none;
+        }
+
+        .watch {
+            color: white;
+            background: rgba(59,130,246,.18);
+            border: 1px solid rgba(59,130,246,.23);
+        }
+
+        .download {
+            color: white;
+            background: linear-gradient(100deg, #06b6d4, #2563eb);
+        }
+
+        .delete {
+            flex: 0 0 42px;
+
+            border: 1px solid rgba(251,59,90,.18);
+            color: #fb7185;
+            background: rgba(251,59,90,.06);
+
+            cursor: pointer;
+        }
+
+        /* Mobile */
+
+        @media (max-width: 700px) {
+            .container {
+                width: min(100% - 20px, 560px);
+            }
+
+            .navbar {
+                height: 68px;
+            }
+
+            .user {
+                display: none;
+            }
+
+            .downloads {
+                grid-template-columns: 1fr;
+            }
+
+            .thumbnail {
+                height: 190px;
+            }
+
+            .page-header {
+                padding-top: 40px;
+            }
+
+            .dashboard-controls {
+                flex-wrap: wrap;
+            }
+
+            .dashboard-controls input {
+                flex-basis: 100%;
+            }
+
+            .dashboard-controls select,
+            .dashboard-controls button {
+                flex: 1;
+            }
+        }
+
+        @media (max-width: 420px) {
+            .brand {
+                font-size: 19px;
+            }
+
+            .actions {
+                flex-wrap: wrap;
+            }
+
+            .watch,
+            .download {
+                min-width: calc(50% - 4px);
+            }
+
+            .delete {
+                flex: 1;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <!-- Navbar -->
+
+    <header class="navbar">
+
+        <a href="/" class="brand">
+
+            <span class="brand-icon">
+                <svg viewBox="0 0 24 24" fill="none">
+                    <path
+                        d="M12 3v10m0 0 4-4m-4 4-4-4M5 17v2h14v-2"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                    />
+                </svg>
+            </span>
+
+            Clipgrab
+
+        </a>
+
+        <div class="nav-right">
+
+            <div class="user">
+                👤 {{ user_name }}
+            </div>
+
+            <a href="/logout" class="logout">
+                Logout
+            </a>
+
+        </div>
+
+    </header>
+
+
+    <!-- Header -->
+
+    <section class="page-header">
+
+        <h1>
+            My <span class="gradient">Downloads</span>
+        </h1>
+
+        <p>
+            Your saved videos, all in one place.
+        </p>
+
+    </section>
+
+    <form class="dashboard-controls" action="/dashboard" method="get">
+        <input
+            type="search"
+            name="q"
+            value="{{ search_query|default('') }}"
+            placeholder="Search downloads..."
+            aria-label="Search downloads"
+        >
+        <select name="status" aria-label="Filter by status">
+            <option value="all" {% if status_filter|default('all') == 'all' %}selected{% endif %}>All statuses</option>
+            <option value="completed" {% if status_filter|default('all') == 'completed' %}selected{% endif %}>Completed</option>
+            <option value="processing" {% if status_filter|default('all') == 'processing' %}selected{% endif %}>Processing</option>
+            <option value="failed" {% if status_filter|default('all') == 'failed' %}selected{% endif %}>Failed</option>
+        </select>
+        <button type="submit">Filter</button>
+    </form>
+
+
+    {% if error %}
+
+        <div class="error">
+            {{ error }}
+        </div>
+
+    {% endif %}
+
+
+    {% if downloads %}
+
+        <form id="bulk-form" method="POST" action="/delete-bulk">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+            <div class="bulk-bar">
+                <label>
+                    <input type="checkbox" id="select-all">
+                    Select all
+                </label>
+                <span class="bulk-count" id="bulk-count">0 selected</span>
+                <button type="submit" class="bulk-delete-btn" id="bulk-delete-btn" disabled>
+                    🗑 Delete selected
+                </button>
+            </div>
+
+        <section class="downloads">
+
+            {% for video in downloads %}
+
+            <article class="card">
+
+                <input
+                    type="checkbox"
+                    name="selected_ids"
+                    value="{{ video.id }}"
+                    class="card-select"
+                    aria-label="Select this video"
+                >
+
+                <div class="thumbnail">
+
+                    {% if video.thumbnail_url %}
+
+                        <img
+                            src="{{ video.thumbnail_url }}"
+                            alt="{{ video.video_title }}"
+                            loading="lazy"
+                        >
+
+                    {% else %}
+
+                        <div class="placeholder">
+                            ▶
+                        </div>
+
+                    {% endif %}
+
+                </div>
+
+
+                <div class="card-body">
+
+                    <div class="title">
+                        {{ video.video_title or "Untitled Video" }}
+                    </div>
+
+
+                    <div class="meta">
+
+                        {% if video.quality %}
+                            <span class="tag">
+                                {{ video.quality }}
+                            </span>
+                        {% endif %}
+
+                        {% if video.format %}
+                            <span class="tag">
+                                {{ video.format|upper }}
+                            </span>
+                        {% endif %}
+
+                        {% if video.status == "completed" %}
+                            <span class="status-badge status-completed">
+                                ● Completed
+                            </span>
+                        {% elif video.status == "processing" %}
+                            <span class="status-badge status-processing">
+                                ● Processing
+                            </span>
+                        {% else %}
+                            <span class="status-badge status-failed">
+                                ● Failed
+                            </span>
+                        {% endif %}
+
+                    </div>
+
+
+                    {% if video.status == "completed" and video.storage_path %}
+
+                    <div class="actions">
+
+                        <a
+                            href="/video/{{ video.id }}"
+                            class="action watch"
+                        >
+                            ▶ Watch
+                        </a>
+
+                        <a
+                            href="/video/{{ video.id }}/download"
+                            class="action download"
+                        >
+                            ↓ Download
+                        </a>
+
+                        <a
+                            href="/delete/{{ video.id }}"
+                            class="action delete"
+                            onclick="return confirm('Delete this video?')"
+                        >
+                            🗑
+                        </a>
+
+                    </div>
+
+                    {% elif video.status == "processing" %}
+
+                        <div
+                            class="actions"
+                            data-download-id="{{ video.id }}"
+                        >
+
+                            {% if video.preview_url %}
+                                <a
+                                    href="/video/{{ video.id }}"
+                                    class="action watch"
+                                >
+                                    ▶ Preview
+                                </a>
+                            {% else %}
+                                <div class="action watch">
+                                    ⏳ Processing...
+                                </div>
+                            {% endif %}
+
+                            <a
+                                href="/delete/{{ video.id }}"
+                                class="action delete"
+                                onclick="return confirm('This download is still processing. Delete it anyway?')"
+                            >
+                                🗑
+                            </a>
+
+                        </div>
+
+                    {% else %}
+
+                        <div class="actions">
+
+                            <a
+                                href="/retry/{{ video.id }}"
+                                class="action watch"
+                            >
+                                🔄 Retry
+                            </a>
+
+                            <a
+                                href="/delete/{{ video.id }}"
+                                class="action delete"
+                                onclick="return confirm('Delete this failed download?')"
+                            >
+                                🗑 Delete
+                            </a>
+
+                        </div>
+
+                    {% endif %}
+
+                </div>
+
+            </article>
+
+            {% endfor %}
+
+        </section>
+
+        </form>
+
+        {% if total_pages|default(1) > 1 %}
+            <nav class="pagination" aria-label="Download pages">
+                {% if page > 1 %}
+                    <a href="/dashboard?q={{ search_query|urlencode }}&status={{ status_filter|urlencode }}&page={{ page - 1 }}">Previous</a>
+                {% endif %}
+                <span class="current">Page {{ page }} of {{ total_pages }}</span>
+                {% if page < total_pages %}
+                    <a href="/dashboard?q={{ search_query|urlencode }}&status={{ status_filter|urlencode }}&page={{ page + 1 }}">Next</a>
+                {% endif %}
+            </nav>
+        {% endif %}
+
+    {% else %}
+
+        <section class="empty">
+
+            <div class="empty-icon">
+                <svg width="30" height="30" viewBox="0 0 24 24" fill="none">
+                    <path
+                        d="M12 3v10m0 0 4-4m-4 4-4-4M5 17v2h14v-2"
+                        stroke="currentColor"
+                        stroke-width="1.8"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                    />
+                </svg>
+            </div>
+
+            <h2>No downloads yet</h2>
+
+            <p>
+                Videos you save will appear here.
+            </p>
+
+            <a href="/" class="download-btn">
+                Download a Video
+            </a>
+
+        </section>
+
+    {% endif %}
+
+</div>
+
+<script>
+(function () {
+    const processingCards = document.querySelectorAll(
+        '[data-download-id]'
+    );
+
+    if (!processingCards.length) {
+        return;
+    }
+
+    async function checkStatus(card) {
+        const downloadId = card.getAttribute("data-download-id");
+
+        if (!downloadId) {
+            return;
+        }
+
+        try {
+            const response = await fetch(
+                `/api/download-status/${encodeURIComponent(downloadId)}`,
+                { cache: "no-store" }
+            );
+
+            if (!response.ok) {
+                return;
+            }
+
+            const data = await response.json();
+
+            if (data.status === "completed" || data.status === "failed") {
+                window.location.reload();
+            }
+        } catch (error) {
+            console.log("Status check failed:", error);
+        }
+    }
+
+    function checkAll() {
+        processingCards.forEach(checkStatus);
+    }
+
+    setInterval(checkAll, 5000);
+})();
+
+(function () {
+    const form = document.getElementById("bulk-form");
+
+    if (!form) {
+        return;
+    }
+
+    const selectAll = document.getElementById("select-all");
+    const deleteBtn = document.getElementById("bulk-delete-btn");
+    const countLabel = document.getElementById("bulk-count");
+    const checkboxes = Array.from(
+        form.querySelectorAll('input[name="selected_ids"]')
+    );
+
+    function refresh() {
+        const checked = checkboxes.filter((box) => box.checked);
+
+        countLabel.textContent = `${checked.length} selected`;
+        deleteBtn.disabled = checked.length === 0;
+
+        checkboxes.forEach((box) => {
+            box.closest(".card").classList.toggle("selected", box.checked);
+        });
+
+        selectAll.checked =
+            checked.length > 0 && checked.length === checkboxes.length;
+    }
+
+    selectAll.addEventListener("change", () => {
+        checkboxes.forEach((box) => {
+            box.checked = selectAll.checked;
+        });
+        refresh();
+    });
+
+    checkboxes.forEach((box) => {
+        box.addEventListener("change", refresh);
+    });
+
+    form.addEventListener("submit", (event) => {
+        const checked = checkboxes.filter((box) => box.checked);
+
+        if (checked.length === 0) {
+            event.preventDefault();
+            return;
+        }
+
+        const confirmed = confirm(
+            `Delete ${checked.length} selected video` +
+            (checked.length === 1 ? "" : "s") +
+            "? This cannot be undone."
+        );
+
+        if (!confirmed) {
+            event.preventDefault();
+        }
+    });
+
+    refresh();
+})();
+</script>
+
+</body>
+</html>
