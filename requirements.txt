@@ -1,6 +1,7 @@
+
 Flask
-yt-dlp
-yt-dlp-ejs
-gunicorn
-supabase
+Flask-WTF
 python-dotenv
+supabase
+werkzeug
+yt-dlp
