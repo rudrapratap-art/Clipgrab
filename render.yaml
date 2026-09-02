@@ -2,16 +2,11 @@ services:
   - type: web
     name: clipgrab
     runtime: python
-    buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT
+    buildCommand: |
+      apt-get update
+      apt-get install -y ffmpeg
+      pip install -r requirements.txt
+    startCommand: gunicorn app:app
     envVars:
-      - key: SUPABASE_URL
-        sync: false
-      - key: SUPABASE_SERVICE_KEY
-        sync: false
-      - key: FLASK_SECRET_KEY
-        generateValue: true
-      - key: FLASK_COOKIE_SECURE
-        value: "1"
-      - key: YOUTUBE_COOKIES
-        sync: false
+      - key: PYTHON_VERSION
+        value: 3.12.0
