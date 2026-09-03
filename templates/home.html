@@ -932,7 +932,14 @@
             <a href="#features">Pricing</a>
             {% if session.user_id %}
                 <a href="/dashboard">Dashboard</a>
-                <a href="/logout" class="nav-cta">Log out</a>
+                <a href="/account">Account</a>
+                <a
+                    href="/logout"
+                    class="nav-cta"
+                    onclick="return confirm('Are you sure you want to log out?')"
+                >
+                    Log out
+                </a>
             {% else %}
                 <a href="/login">Log in</a>
                 <a href="/register" class="nav-cta">Get Started</a>
