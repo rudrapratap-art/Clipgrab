@@ -7,6 +7,9 @@ import re
 import time
 import threading
 import uuid
+import secrets
+import smtplib
+from email.message import EmailMessage
 from datetime import datetime, timedelta, timezone
 import yt_dlp
 from dotenv import load_dotenv
@@ -56,6 +59,67 @@ STUCK_PROCESSING_TIMEOUT_MINUTES = int(
 STUCK_SWEEP_INTERVAL_SECONDS = int(
     os.environ.get("STUCK_SWEEP_INTERVAL_SECONDS", "60")
 )
+
+# ============================================================
+# Email (account verification / password reset)
+# ============================================================
+SMTP_HOST = os.environ.get("SMTP_HOST")
+SMTP_PORT = int(os.environ.get("SMTP_PORT", "587"))
+SMTP_USER = os.environ.get("SMTP_USER")
+SMTP_PASSWORD = os.environ.get("SMTP_PASSWORD")
+SMTP_FROM_EMAIL = os.environ.get("SMTP_FROM_EMAIL", SMTP_USER or "no-reply@example.com")
+SMTP_FROM_NAME = os.environ.get("SMTP_FROM_NAME", "Clipgrab")
+
+VERIFY_TOKEN_EXPIRY_HOURS = 24
+RESET_TOKEN_EXPIRY_MINUTES = 60
+
+
+def send_email(to_email, subject, html_body):
+    """Best-effort email sender. If SMTP isn't configured (SMTP_HOST /
+    SMTP_USER / SMTP_PASSWORD missing from file.env), the email is
+    printed to the console instead of failing outright — so account
+    flows are still testable locally before real SMTP is wired up."""
+    if not SMTP_HOST or not SMTP_USER or not SMTP_PASSWORD:
+        print(
+            f"[email not sent — SMTP not configured] "
+            f"To: {to_email} | Subject: {subject}\n{html_body}"
+        )
+        return False
+
+    try:
+        message = EmailMessage()
+        message["Subject"] = subject
+        message["From"] = f"{SMTP_FROM_NAME} <{SMTP_FROM_EMAIL}>"
+        message["To"] = to_email
+        message.set_content(
+            "This email requires an HTML-capable email client to view."
+        )
+        message.add_alternative(html_body, subtype="html")
+
+        with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=15) as server:
+            server.starttls()
+            server.login(SMTP_USER, SMTP_PASSWORD)
+            server.send_message(message)
+
+        return True
+
+    except Exception as e:
+        print(f"Failed to send email to {to_email}: {e}")
+        return False
+
+
+def get_account_view(user_id):
+    """Fetch the safe-to-render subset of a user's account row (never
+    includes password_hash or the raw reset/verification tokens)."""
+    result = (
+        supabase
+        .table("users")
+        .select("id, name, email, email_verified, created_at")
+        .eq("id", user_id)
+        .single()
+        .execute()
+    )
+    return result.data
 
 # ============================================================
 # Cookies
@@ -355,44 +419,55 @@ def dashboard():
 
     user_id = session["user_id"]
 
+    search_query = request.args.get("q", "").strip().lower()
+    status_filter = request.args.get("status", "all").strip().lower()
+    sort_order = request.args.get("sort", "newest").strip().lower()
+
+    page_size = 8
     try:
-        # Get only this user's downloads
-        result = (
+        page = max(1, int(request.args.get("page", "1")))
+    except ValueError:
+        page = 1
+
+    # Escape LIKE wildcards in the user's search text so a query like
+    # "100%" is treated literally, not as a pattern.
+    escaped_search = search_query.replace("%", r"\%").replace("_", r"\_")
+
+    def build_query():
+        query = (
             supabase
             .table("downloads")
-            .select("*")
+            .select("*", count="exact")
             .eq("user_id", user_id)
-            .order("created_at", desc=True)
-            .execute()
         )
+        if search_query:
+            query = query.ilike("video_title", f"%{escaped_search}%")
+        if status_filter in {"processing", "completed", "failed"}:
+            query = query.eq("status", status_filter)
+        return query.order("created_at", desc=(sort_order != "oldest"))
+
+    try:
+        # Ask the database for exactly one page of rows (and the total
+        # matching count) instead of fetching every download and
+        # slicing it in Python — this used to pull a user's entire
+        # history on every dashboard visit regardless of how many
+        # rows they had.
+        start = (page - 1) * page_size
+        end = start + page_size - 1
+        result = build_query().range(start, end).execute()
+
+        total_downloads = result.count or 0
+        total_pages = max(1, (total_downloads + page_size - 1) // page_size)
+
+        if page > total_pages:
+            # Requested page is past the end (e.g. a stale bookmark
+            # or a hand-edited URL) — clamp and re-fetch that page.
+            page = total_pages
+            start = (page - 1) * page_size
+            end = start + page_size - 1
+            result = build_query().range(start, end).execute()
 
         downloads = result.data or []
-        search_query = request.args.get("q", "").strip().lower()
-        status_filter = request.args.get("status", "all").strip().lower()
-
-        if search_query:
-            downloads = [
-                video for video in downloads
-                if search_query in (video.get("video_title") or "").lower()
-            ]
-
-        if status_filter in {"processing", "completed", "failed"}:
-            downloads = [
-                video for video in downloads
-                if video.get("status") == status_filter
-            ]
-
-        page_size = 8
-        try:
-            page = max(1, int(request.args.get("page", "1")))
-        except ValueError:
-            page = 1
-
-        total_downloads = len(downloads)
-        total_pages = max(1, (total_downloads + page_size - 1) // page_size)
-        page = min(page, total_pages)
-        start = (page - 1) * page_size
-        downloads = downloads[start:start + page_size]
 
         return render_template(
             "dashboard.html",
@@ -400,6 +475,7 @@ def dashboard():
             downloads=downloads,
             search_query=search_query,
             status_filter=status_filter,
+            sort_order=sort_order,
             page=page,
             total_pages=total_pages,
             total_downloads=total_downloads
@@ -817,6 +893,12 @@ def register():
             # Hash password before storing it
             password_hash = generate_password_hash(password)
 
+            verification_token = secrets.token_urlsafe(32)
+            verification_expires = (
+                datetime.now(timezone.utc)
+                + timedelta(hours=VERIFY_TOKEN_EXPIRY_HOURS)
+            ).isoformat()
+
             # Create user
             result = (
                 supabase
@@ -824,7 +906,10 @@ def register():
                 .insert({
                     "name": name,
                     "email": email,
-                    "password_hash": password_hash
+                    "password_hash": password_hash,
+                    "email_verified": False,
+                    "verification_token": verification_token,
+                    "verification_token_expires": verification_expires,
                 })
                 .execute()
             )
@@ -835,9 +920,28 @@ def register():
                     error="Unable to create account."
                 )
 
+            verify_link = (
+                f"{request.url_root.rstrip('/')}"
+                f"/verify-email/{verification_token}"
+            )
+            send_email(
+                email,
+                "Verify your Clipgrab email",
+                f"""
+                <p>Hi {name},</p>
+                <p>Thanks for signing up for Clipgrab. Please verify
+                your email address to finish setting up your account:</p>
+                <p><a href="{verify_link}">{verify_link}</a></p>
+                <p>This link expires in {VERIFY_TOKEN_EXPIRY_HOURS} hours.</p>
+                """
+            )
+
             return render_template(
                 "register.html",
-                success="Account created successfully! You can now log in."
+                success=(
+                    "Account created! We've sent a verification link "
+                    "to your email — you can log in right away."
+                )
             )
 
         except Exception as e:
@@ -848,7 +952,520 @@ def register():
 
     return render_template("register.html")
 
-  
+
+# ============================================================
+# Email verification
+# ============================================================
+@app.route("/verify-email/<token>")
+def verify_email(token):
+    try:
+        result = (
+            supabase
+            .table("users")
+            .select("id, verification_token_expires")
+            .eq("verification_token", token)
+            .execute()
+        )
+
+        if not result.data:
+            return render_template(
+                "login.html",
+                error="That verification link is invalid or has already been used."
+            )
+
+        user = result.data[0]
+        expires = user.get("verification_token_expires")
+
+        if expires and datetime.fromisoformat(
+            expires.replace("Z", "+00:00")
+        ) < datetime.now(timezone.utc):
+            return render_template(
+                "login.html",
+                error=(
+                    "That verification link has expired. Log in and "
+                    "resend a new one from your account page."
+                )
+            )
+
+        supabase.table("users").update({
+            "email_verified": True,
+            "verification_token": None,
+            "verification_token_expires": None,
+        }).eq("id", user["id"]).execute()
+
+        return render_template(
+            "login.html",
+            success="Your email is verified. You can log in now."
+        )
+
+    except Exception as e:
+        return render_template(
+            "login.html",
+            error=f"Verification failed: {str(e)}"
+        )
+
+
+# ============================================================
+# Forgot password
+# ============================================================
+@app.route("/forgot-password", methods=["GET", "POST"])
+def forgot_password():
+    if request.method == "POST":
+        email = request.form.get("email", "").strip().lower()
+
+        if not email:
+            return render_template(
+                "forgot_password.html",
+                error="Enter the email on your account."
+            )
+
+        try:
+            result = (
+                supabase
+                .table("users")
+                .select("id, name, email")
+                .eq("email", email)
+                .execute()
+            )
+
+            if result.data:
+                user = result.data[0]
+                reset_token = secrets.token_urlsafe(32)
+                reset_expires = (
+                    datetime.now(timezone.utc)
+                    + timedelta(minutes=RESET_TOKEN_EXPIRY_MINUTES)
+                ).isoformat()
+
+                supabase.table("users").update({
+                    "reset_token": reset_token,
+                    "reset_token_expires": reset_expires,
+                }).eq("id", user["id"]).execute()
+
+                reset_link = (
+                    f"{request.url_root.rstrip('/')}"
+                    f"/reset-password/{reset_token}"
+                )
+                send_email(
+                    email,
+                    "Reset your Clipgrab password",
+                    f"""
+                    <p>Hi {user.get('name', '')},</p>
+                    <p>We received a request to reset your Clipgrab
+                    password. This link expires in
+                    {RESET_TOKEN_EXPIRY_MINUTES} minutes:</p>
+                    <p><a href="{reset_link}">{reset_link}</a></p>
+                    <p>If you didn't request this, you can safely
+                    ignore this email — your password won't change.</p>
+                    """
+                )
+
+            # Same message whether or not the email is registered, so
+            # this can't be used to check which emails have accounts.
+            return render_template(
+                "forgot_password.html",
+                success=(
+                    "If an account exists for that email, a reset "
+                    "link is on its way."
+                )
+            )
+
+        except Exception as e:
+            return render_template(
+                "forgot_password.html",
+                error=f"Something went wrong: {str(e)}"
+            )
+
+    return render_template("forgot_password.html")
+
+
+# ============================================================
+# Reset password
+# ============================================================
+@app.route("/reset-password/<token>", methods=["GET", "POST"])
+def reset_password(token):
+    try:
+        result = (
+            supabase
+            .table("users")
+            .select("id, reset_token_expires")
+            .eq("reset_token", token)
+            .execute()
+        )
+
+        if not result.data:
+            return render_template(
+                "login.html",
+                error="That reset link is invalid or has already been used."
+            )
+
+        user = result.data[0]
+        expires = user.get("reset_token_expires")
+
+        if expires and datetime.fromisoformat(
+            expires.replace("Z", "+00:00")
+        ) < datetime.now(timezone.utc):
+            return render_template(
+                "login.html",
+                error="That reset link has expired. Request a new one."
+            )
+
+    except Exception as e:
+        return render_template(
+            "login.html",
+            error=f"Something went wrong: {str(e)}"
+        )
+
+    if request.method == "POST":
+        new_password = request.form.get("password", "")
+        confirm_password = request.form.get("confirm_password", "")
+
+        if not new_password or not confirm_password:
+            return render_template(
+                "reset_password.html",
+                token=token,
+                error="Both fields are required."
+            )
+
+        if new_password != confirm_password:
+            return render_template(
+                "reset_password.html",
+                token=token,
+                error="Passwords do not match."
+            )
+
+        if len(new_password) < 6:
+            return render_template(
+                "reset_password.html",
+                token=token,
+                error="Password must be at least 6 characters."
+            )
+
+        try:
+            supabase.table("users").update({
+                "password_hash": generate_password_hash(new_password),
+                "reset_token": None,
+                "reset_token_expires": None,
+            }).eq("id", user["id"]).execute()
+
+            return render_template(
+                "login.html",
+                success="Password updated. You can log in now."
+            )
+
+        except Exception as e:
+            return render_template(
+                "reset_password.html",
+                token=token,
+                error=f"Something went wrong: {str(e)}"
+            )
+
+    return render_template("reset_password.html", token=token)
+
+
+# ============================================================
+# Account settings
+# ============================================================
+@app.route("/account")
+def account():
+    if "user_id" not in session:
+        return redirect("/login")
+
+    try:
+        user = get_account_view(session["user_id"])
+        if not user:
+            session.clear()
+            return redirect("/login")
+
+        return render_template("account.html", user=user)
+
+    except Exception as e:
+        return render_template(
+            "account.html",
+            user=None,
+            error=f"Unable to load account: {str(e)}"
+        )
+
+
+@app.route("/account/profile", methods=["POST"])
+def update_profile():
+    if "user_id" not in session:
+        return redirect("/login")
+
+    user_id = session["user_id"]
+    name = request.form.get("name", "").strip()
+    email = request.form.get("email", "").strip().lower()
+
+    if not name or not email:
+        return render_template(
+            "account.html",
+            user=get_account_view(user_id),
+            error="Name and email are both required."
+        )
+
+    try:
+        current = get_account_view(user_id)
+        email_changed = current and current.get("email") != email
+
+        if email_changed:
+            existing = (
+                supabase
+                .table("users")
+                .select("id")
+                .eq("email", email)
+                .neq("id", user_id)
+                .execute()
+            )
+            if existing.data:
+                return render_template(
+                    "account.html",
+                    user=current,
+                    error="That email is already in use by another account."
+                )
+
+        update_payload = {"name": name, "email": email}
+        verify_link = None
+
+        if email_changed:
+            # Changing the email means it has to be verified again.
+            verification_token = secrets.token_urlsafe(32)
+            verification_expires = (
+                datetime.now(timezone.utc)
+                + timedelta(hours=VERIFY_TOKEN_EXPIRY_HOURS)
+            ).isoformat()
+            update_payload.update({
+                "email_verified": False,
+                "verification_token": verification_token,
+                "verification_token_expires": verification_expires,
+            })
+            verify_link = (
+                f"{request.url_root.rstrip('/')}"
+                f"/verify-email/{verification_token}"
+            )
+
+        supabase.table("users").update(update_payload).eq(
+            "id", user_id
+        ).execute()
+
+        session["user_name"] = name
+        session["user_email"] = email
+
+        success_msg = "Profile updated."
+
+        if email_changed and verify_link:
+            send_email(
+                email,
+                "Verify your new Clipgrab email",
+                f"""
+                <p>Hi {name},</p>
+                <p>Confirm your new email address for Clipgrab:</p>
+                <p><a href="{verify_link}">{verify_link}</a></p>
+                """
+            )
+            success_msg += (
+                " We've sent a verification link to your new email address."
+            )
+
+        return render_template(
+            "account.html",
+            user=get_account_view(user_id),
+            success=success_msg
+        )
+
+    except Exception as e:
+        return render_template(
+            "account.html",
+            user=get_account_view(user_id),
+            error=f"Unable to update profile: {str(e)}"
+        )
+
+
+@app.route("/account/password", methods=["POST"])
+def change_password():
+    if "user_id" not in session:
+        return redirect("/login")
+
+    user_id = session["user_id"]
+    current_password = request.form.get("current_password", "")
+    new_password = request.form.get("new_password", "")
+    confirm_password = request.form.get("confirm_password", "")
+
+    try:
+        result = (
+            supabase
+            .table("users")
+            .select("id, password_hash")
+            .eq("id", user_id)
+            .single()
+            .execute()
+        )
+        user = result.data
+
+        if not user or not check_password_hash(
+            user["password_hash"], current_password
+        ):
+            return render_template(
+                "account.html",
+                user=get_account_view(user_id),
+                error="Current password is incorrect."
+            )
+
+        if not new_password or new_password != confirm_password:
+            return render_template(
+                "account.html",
+                user=get_account_view(user_id),
+                error="New passwords do not match."
+            )
+
+        if len(new_password) < 6:
+            return render_template(
+                "account.html",
+                user=get_account_view(user_id),
+                error="New password must be at least 6 characters."
+            )
+
+        supabase.table("users").update({
+            "password_hash": generate_password_hash(new_password)
+        }).eq("id", user_id).execute()
+
+        return render_template(
+            "account.html",
+            user=get_account_view(user_id),
+            success="Password changed successfully."
+        )
+
+    except Exception as e:
+        return render_template(
+            "account.html",
+            user=get_account_view(user_id),
+            error=f"Unable to change password: {str(e)}"
+        )
+
+
+@app.route("/account/resend-verification", methods=["POST"])
+def resend_verification():
+    if "user_id" not in session:
+        return redirect("/login")
+
+    user_id = session["user_id"]
+
+    try:
+        user = get_account_view(user_id)
+        if not user:
+            return redirect("/login")
+
+        if user.get("email_verified"):
+            return render_template(
+                "account.html",
+                user=user,
+                success="Your email is already verified."
+            )
+
+        verification_token = secrets.token_urlsafe(32)
+        verification_expires = (
+            datetime.now(timezone.utc)
+            + timedelta(hours=VERIFY_TOKEN_EXPIRY_HOURS)
+        ).isoformat()
+
+        supabase.table("users").update({
+            "verification_token": verification_token,
+            "verification_token_expires": verification_expires,
+        }).eq("id", user_id).execute()
+
+        verify_link = (
+            f"{request.url_root.rstrip('/')}"
+            f"/verify-email/{verification_token}"
+        )
+        send_email(
+            user["email"],
+            "Verify your Clipgrab email",
+            f"""
+            <p>Hi {user.get('name', '')},</p>
+            <p>Verify your Clipgrab email address:</p>
+            <p><a href="{verify_link}">{verify_link}</a></p>
+            """
+        )
+
+        return render_template(
+            "account.html",
+            user=user,
+            success="Verification email sent — check your inbox."
+        )
+
+    except Exception as e:
+        return render_template(
+            "account.html",
+            user=get_account_view(user_id),
+            error=f"Unable to resend verification email: {str(e)}"
+        )
+
+
+@app.route("/account/delete", methods=["POST"])
+def delete_account():
+    if "user_id" not in session:
+        return redirect("/login")
+
+    user_id = session["user_id"]
+    password = request.form.get("password", "")
+
+    try:
+        result = (
+            supabase
+            .table("users")
+            .select("id, password_hash")
+            .eq("id", user_id)
+            .single()
+            .execute()
+        )
+        user = result.data
+
+        if not user or not check_password_hash(
+            user["password_hash"], password
+        ):
+            return render_template(
+                "account.html",
+                user=get_account_view(user_id),
+                error="Password is incorrect. Your account was not deleted."
+            )
+
+        downloads = (
+            supabase
+            .table("downloads")
+            .select("storage_path")
+            .eq("user_id", user_id)
+            .execute()
+        ).data or []
+
+        storage_paths = [
+            item["storage_path"] for item in downloads
+            if item.get("storage_path")
+        ]
+
+        if storage_paths:
+            try:
+                supabase.storage.from_("videos").remove(storage_paths)
+            except Exception as storage_error:
+                print("Account deletion storage cleanup warning:", storage_error)
+
+        supabase.table("downloads").delete().eq(
+            "user_id", user_id
+        ).execute()
+        supabase.table("users").delete().eq("id", user_id).execute()
+
+        session.clear()
+
+        return render_template(
+            "login.html",
+            success="Your account and all your videos have been deleted."
+        )
+
+    except Exception as e:
+        return render_template(
+            "account.html",
+            user=get_account_view(user_id),
+            error=f"Unable to delete account: {str(e)}"
+        )
+
+
 # ============================================================
 # Watch saved video
 # ============================================================
