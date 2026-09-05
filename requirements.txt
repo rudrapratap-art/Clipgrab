@@ -5,3 +5,4 @@ yt-dlp
 python-dotenv
 supabase
 Werkzeug
+Flask-Limiter
