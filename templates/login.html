@@ -313,6 +313,9 @@
 
     <form method="POST" action="/login">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        {% if request.args.get('next') %}
+        <input type="hidden" name="next" value="{{ request.args.get('next') }}">
+        {% endif %}
 
         <div class="field">
             <label for="email">Email</label>

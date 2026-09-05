@@ -94,6 +94,7 @@
 
             color: #cbd5e1;
             background: rgba(255,255,255,.025);
+            text-decoration: none;
 
             font-size: 12px;
             font-weight: 600;
@@ -498,6 +499,7 @@
 
             text-align: center;
 
+            font: inherit;
             font-size: 11px;
             font-weight: 800;
 
@@ -615,11 +617,15 @@
 
         <div class="nav-right">
 
-            <div class="user">
+            <a href="/account" class="user">
                 👤 {{ user_name }}
-            </div>
+            </a>
 
-            <a href="/logout" class="logout">
+            <a
+                href="/logout"
+                class="logout"
+                onclick="return confirm('Are you sure you want to log out?')"
+            >
                 Logout
             </a>
 
@@ -655,6 +661,10 @@
             <option value="completed" {% if status_filter|default('all') == 'completed' %}selected{% endif %}>Completed</option>
             <option value="processing" {% if status_filter|default('all') == 'processing' %}selected{% endif %}>Processing</option>
             <option value="failed" {% if status_filter|default('all') == 'failed' %}selected{% endif %}>Failed</option>
+        </select>
+        <select name="sort" aria-label="Sort by date">
+            <option value="newest" {% if sort_order|default('newest') == 'newest' %}selected{% endif %}>Newest first</option>
+            <option value="oldest" {% if sort_order|default('newest') == 'oldest' %}selected{% endif %}>Oldest first</option>
         </select>
         <button type="submit">Filter</button>
     </form>
@@ -776,13 +786,17 @@
                             ↓ Download
                         </a>
 
-                        <a
-                            href="/delete/{{ video.id }}"
-                            class="action delete"
-                            onclick="return confirm('Delete this video?')"
+                        <form
+                            action="/delete/{{ video.id }}"
+                            method="POST"
+                            style="display:contents;"
+                            onsubmit="return confirm('Delete this video?')"
                         >
-                            🗑
-                        </a>
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="action delete">
+                                🗑
+                            </button>
+                        </form>
 
                     </div>
 
@@ -806,13 +820,17 @@
                                 </div>
                             {% endif %}
 
-                            <a
-                                href="/delete/{{ video.id }}"
-                                class="action delete"
-                                onclick="return confirm('This download is still processing. Delete it anyway?')"
+                            <form
+                                action="/delete/{{ video.id }}"
+                                method="POST"
+                                style="display:contents;"
+                                onsubmit="return confirm('This download is still processing. Delete it anyway?')"
                             >
-                                🗑
-                            </a>
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="action delete">
+                                    🗑
+                                </button>
+                            </form>
 
                         </div>
 
@@ -827,13 +845,17 @@
                                 🔄 Retry
                             </a>
 
-                            <a
-                                href="/delete/{{ video.id }}"
-                                class="action delete"
-                                onclick="return confirm('Delete this failed download?')"
+                            <form
+                                action="/delete/{{ video.id }}"
+                                method="POST"
+                                style="display:contents;"
+                                onsubmit="return confirm('Delete this failed download?')"
                             >
-                                🗑 Delete
-                            </a>
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="action delete">
+                                    🗑 Delete
+                                </button>
+                            </form>
 
                         </div>
 
@@ -852,11 +874,11 @@
         {% if total_pages|default(1) > 1 %}
             <nav class="pagination" aria-label="Download pages">
                 {% if page > 1 %}
-                    <a href="/dashboard?q={{ search_query|urlencode }}&status={{ status_filter|urlencode }}&page={{ page - 1 }}">Previous</a>
+                    <a href="/dashboard?q={{ search_query|urlencode }}&status={{ status_filter|urlencode }}&sort={{ sort_order|default('newest')|urlencode }}&page={{ page - 1 }}">Previous</a>
                 {% endif %}
                 <span class="current">Page {{ page }} of {{ total_pages }}</span>
                 {% if page < total_pages %}
-                    <a href="/dashboard?q={{ search_query|urlencode }}&status={{ status_filter|urlencode }}&page={{ page + 1 }}">Next</a>
+                    <a href="/dashboard?q={{ search_query|urlencode }}&status={{ status_filter|urlencode }}&sort={{ sort_order|default('newest')|urlencode }}&page={{ page + 1 }}">Next</a>
                 {% endif %}
             </nav>
         {% endif %}
